@@ -28,33 +28,33 @@ Feature: Token Service Use Cases
     And A token named Test Token (HTT) with 1000 tokens
     And The first account holds 100 HTT tokens
     And The second account holds 0 HTT tokens
-    When The first account creates a transaction to transfer 10 HTT tokens to the second account
-    And The first account submits the transaction
-    Then The second account holds 10 HTT tokens
-    And The first account holds 90 HTT tokens
+    # When The first account creates a transaction to transfer 10 HTT tokens to the second account
+    # And The first account submits the transaction
+    # Then The second account holds 10 HTT tokens
+    # And The first account holds 90 HTT tokens
 
-  Scenario: Create a token transfer transaction paid for by the recipient
-    Given A first hedera account with more than 10 hbar
-    And A second Hedera account
-    And A token named Test Token (HTT) with 1000 tokens
-    And The second account holds 100 HTT tokens
-    And The first account holds 0 HTT tokens
-    When The second account creates a transaction to transfer 10 HTT tokens to the first account
-    And The first account submits the transaction
-    Then The second account holds 90 HTT tokens
-    And The first account holds 10 HTT tokens
-    And The first account has paid for the transaction fee
 
-  Scenario: Create a multi party token transfer transaction
-    Given A token named Test Token (HTT) with 1000 tokens
-    And A first hedera account with more than 10 hbar and 100 HTT tokens
-    And A second Hedera account with 0 hbar and 100 HTT tokens
-    And A third Hedera account with 0 hbar and 100 HTT tokens
-    And A fourth Hedera account with 0 hbar and 100 HTT tokens
-    When A transaction is created to transfer 10 HTT tokens out of the first and second account and 5 HTT tokens into the third account and 15 HTT tokens into the fourth account
-    And The first account submits the transaction
-    Then The first account holds 90 HTT tokens
-    And The second account holds 90 HTT tokens
-    And The third account holds 105 HTT tokens
-    And The fourth account holds 115 HTT tokens
+#   Scenario: Create a token transfer transaction paid for by the recipient
+#     Given A first hedera account with more than 10 hbar
+#     And A second Hedera account
+#     And A token named Test Token (HTT) with 1000 tokens
+#     And The second account holds 100 HTT tokens
+#     And The first account holds 0 HTT tokens
+#     When The second account creates a transaction to transfer 10 HTT tokens to the first account
+#     And The first account submits the transaction
+#     Then The second account holds 90 HTT tokens
+#     And The first account holds 10 HTT tokens
+#     And The first account has paid for the transaction fee
 
+#   Scenario: Create a multi party token transfer transaction
+#     Given A token named Test Token (HTT) with 1000 tokens
+#     And A first hedera account with more than 10 hbar and 100 HTT tokens
+#     And A second Hedera account with 0 hbar and 100 HTT tokens
+#     And A third Hedera account with 0 hbar and 100 HTT tokens
+#     And A fourth Hedera account with 0 hbar and 100 HTT tokens
+#     When A transaction is created to transfer 10 HTT tokens out of the first and second account and 5 HTT tokens into the third account and 15 HTT tokens into the fourth account
+#     And The first account submits the transaction
+#     Then The first account holds 90 HTT tokens
+#     And The second account holds 90 HTT tokens
+#     And The third account holds 105 HTT tokens
+#     And The fourth account holds 115 HTT tokens

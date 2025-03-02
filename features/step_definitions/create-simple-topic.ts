@@ -26,8 +26,6 @@ const client = Client.forTestnet();
 const operatorIdStr = process.env.MY_ACCOUNT_ID;
 const operatorKeyStr = process.env.MY_PRIVATE_KEY;
 
-console.log();
-
 if (!operatorIdStr || !operatorKeyStr) {
   throw new Error(
     "Missing environment variables: MY_ACCOUNT_ID or MY_PRIVATE_KEY"
