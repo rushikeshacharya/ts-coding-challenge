@@ -36,3 +36,5 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+src/config.ts

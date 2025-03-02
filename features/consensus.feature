@@ -1,4 +1,5 @@
 Feature: Use Cases for the consensus service and Threshold keys
+
   @dev
   Scenario: Create a topic and publish a message
     Given a first account with more than 10 hbars
