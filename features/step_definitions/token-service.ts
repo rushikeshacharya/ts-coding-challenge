@@ -11,6 +11,9 @@ import {
   Status,
   TokenInfoQuery,
   TokenMintTransaction,
+  TokenAssociateTransaction,
+  TransferTransaction,
+  TransactionId,
 } from "@hashgraph/sdk";
 import assert from "node:assert";
 
@@ -34,6 +37,101 @@ const operatorId = AccountId.fromString(operatorIdStr);
 const operatorKey = PrivateKey.fromStringECDSA(operatorKeyStr);
 client.setOperator(operatorId, operatorKey);
 
+//============================== Custom Functions =======================================
+/**
+ * 1. Token Association Function
+ * it is used to associate a token to an account
+ * should be called before token transfer
+ * @param TokenId,
+ * @param AccountId
+ * @param AccountPrivKey
+ * // token id type: shardNum.realmNum.tokenNum
+ */
+
+async function tokenAssociation(
+  accountId: AccountId,
+  tokenId: any,
+  accountPrivKey: PrivateKey
+) {
+  try {
+    const tx = new TokenAssociateTransaction()
+      .setAccountId(accountId)
+      .setTokenIds([tokenId])
+      .freezeWith(client);
+
+    const signTx = await tx.sign(accountPrivKey);
+    const txRes = await signTx.execute(client);
+    const txReceipt = await txRes.getReceipt(client);
+    assert.strictEqual(
+      txReceipt.status,
+      Status.Success,
+      "Failed to associate a token with account"
+    );
+  } catch (error) {
+    // console.log("Error while tokenAssociation Transaction", error);
+  }
+}
+
+/**
+ * 2. Mint Tokens
+ */
+
+async function mintTokens(
+  tokenId: string,
+  tokenAmount: number,
+  treasuryAccKey: PrivateKey
+) {
+  //mint given no of tokens to first account
+  try {
+    const mintTx = new TokenMintTransaction()
+      .setTokenId(tokenId)
+      .setAmount(tokenAmount)
+      .freezeWith(client);
+
+    const signTx = await mintTx.sign(treasuryAccKey);
+    const txRes = await signTx.execute(client);
+
+    const txReceipt = await txRes.getReceipt(client);
+    assert.strictEqual(
+      txReceipt.status,
+      Status.Success,
+      "Failed to mint new tokens"
+    );
+  } catch (error) {
+    console.log("Error while mintTokens Transaction", error);
+  }
+}
+
+/**
+ * 3. Transfer Tokens
+ */
+async function transferTokens(
+  tokenId: any,
+  toAccountId: AccountId,
+  treasuryAccountId: AccountId,
+  treasuryAccKey: PrivateKey,
+  tokenAmount: number
+) {
+  try {
+    const tx = new TransferTransaction()
+      .addTokenTransfer(tokenId, treasuryAccountId, -tokenAmount)
+      .addTokenTransfer(tokenId, toAccountId, tokenAmount)
+      .freezeWith(client);
+
+    const signTx = await tx.sign(treasuryAccKey);
+    const txRes = await signTx.execute(client);
+    const txReceipt = await txRes.getReceipt(client);
+    assert.strictEqual(
+      txReceipt.status,
+      Status.Success,
+      "Failed to transfer tokens"
+    );
+  } catch (error) {
+    console.log("Error while transferTokens Transaction", error);
+  }
+}
+//============================== End of Custom Functions ======================================
+
 Given(
   /^A Hedera account with more than (\d+) hbar$/,
   async function (expectedBalance: number) {
@@ -47,6 +145,8 @@ Given(
     //Create the query request
     const query = new AccountBalanceQuery().setAccountId(MY_ACCOUNT_ID);
     const balance = await query.execute(client);
+
+    console.log("Balance ", balance.hbars.toBigNumber().toNumber());
 
     assert.ok(
       balance.hbars.toBigNumber().toNumber() > expectedBalance,
@@ -263,24 +363,113 @@ Given(
     );
   }
 );
-// Given(
-//   /^The first account holds (\d+) HTT tokens$/,
-//   { timeout: 40000 },
-//   async function (tokens: number) {}
-// );
-// Given(/^The second account holds (\d+) HTT tokens$/, async function () {});
-// When(/^The first account creates a transaction to transfer (\d+) HTT tokens to the second account$/, async function () {
+Given(
+  /^The first account holds (\d+) HTT tokens$/,
+  { timeout: 40000 },
+  async function (tokenAmount: number) {
+    await tokenAssociation(
+      this.firstAccountId,
+      this.tokenId,
+      this.firstAccountPrivKey
+    );
 
-// });
-// When(/^The first account submits the transaction$/, async function () {
+    await mintTokens(this.tokenId, tokenAmount, this.privKey);
+    //TODO: transfer the tokens to given account
+    await transferTokens(
+      this.tokenId,
+      this.firstAccountId,
+      this.accountId,
+      this.privKey,
+      tokenAmount
+    );
 
-// });
-// When(/^The second account creates a transaction to transfer (\d+) HTT tokens to the first account$/, async function () {
+    const queryTx = await new AccountBalanceQuery()
+      .setAccountId(this.firstAccountId)
+      .execute(client);
 
-// });
-// Then(/^The first account has paid for the transaction fee$/, async function () {
+    const balance = queryTx.tokens?.get(this.tokenId)?.toNumber();
+    assert.strictEqual(tokenAmount, balance, `Token balance does not match`);
 
-// });
+    // console.log("Query", queryTx.tokens?._map.get(this.tokenId.toString()));
+    // console.log("Balance: ", queryTx.tokens?.get(this.tokenId)?.toNumber());
+  }
+);
+Given(
+  /^The second account holds (\d+) HTT tokens$/,
+  async function (tokenAmount: number) {
+    await tokenAssociation(
+      this.secondAccountId,
+      this.tokenId,
+      this.secondAccountPrivateKey
+    );
+
+    const queryTx = await new AccountBalanceQuery()
+      .setAccountId(this.secondAccountId)
+      .execute(client);
+    const balance = queryTx.tokens?.get(this.tokenId)?.toNumber();
+    // console.log("Balance: ", queryTx.tokens?.get(this.tokenId)?.toNumber());
+    assert.strictEqual(tokenAmount, balance, `Token balance does not match`);
+
+    // console.log("Query", queryTx.tokens?._map.get(this.tokenId.toString()));
+  }
+);
+
+When(
+  /^The first account creates a transaction to transfer (\d+) HTT tokens to the second account$/,
+  async function (tokenAmount: number) {
+    // create a txId before hand from the first account
+    const txId = TransactionId.generate(this.firstAccountId);
+
+    this.transferTx = new TransferTransaction()
+      .addTokenTransfer(this.tokenId, this.firstAccountId, -tokenAmount)
+      .addTokenTransfer(this.tokenId, this.secondAccountId, tokenAmount)
+      .setTransactionId(txId)
+      .setTransactionValidDuration(120)
+      // .setNodeAccountIds([this.secondAccountId])
+      .setNodeAccountIds([new AccountId(3)])
+      .freezeWith(client);
+  }
+);
+When(/^The first account submits the transaction$/, async function () {
+  const signTransferTx = await this.transferTx.sign(this.firstAccountPrivKey);
+  const txRes = await signTransferTx.execute(client);
+  const txReceipt = await txRes.getReceipt(client);
+  this.txReceipt = txReceipt;
+
+  assert.strictEqual(
+    txReceipt.status,
+    Status.Success,
+    "Failed to transfer a Token"
+  );
+});
+
+// TODO: Note: muliple step function declaration of same feature is note required.
+// gives error as  Multiple step definitions match:
+
+When(
+  /^The second account creates a transaction to transfer (\d+) HTT tokens to the first account$/,
+  async function (tokenAmount: number) {
+    const txId = TransactionId.generate(this.secondAccountId);
+
+    this.transferTx = new TransferTransaction()
+      .addTokenTransfer(this.tokenId, this.secondAccountId, -tokenAmount)
+      .addTokenTransfer(this.tokenId, this.firstAccountId, tokenAmount)
+      .setTransactionId(txId)
+      .setTransactionValidDuration(120)
+      // .setNodeAccountIds([this.firstAccountId])
+      .setNodeAccountIds([new AccountId(3)])
+      .freezeWith(client);
+  }
+);
+Then(
+  /^The first account has paid for the transaction fee$/,
+  { timeout: 30000 },
+  async function () {
+    const receipt = await this.txReceipt.getRecord(client);
+    console.log("receipt ", receipt);
+  }
+);
+
 // Given(/^A first hedera account with more than (\d+) hbar and (\d+) HTT tokens$/, async function () {
 
 // });

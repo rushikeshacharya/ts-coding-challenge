@@ -28,23 +28,23 @@ Feature: Token Service Use Cases
     And A token named Test Token (HTT) with 1000 tokens
     And The first account holds 100 HTT tokens
     And The second account holds 0 HTT tokens
-    # When The first account creates a transaction to transfer 10 HTT tokens to the second account
-    # And The first account submits the transaction
-    # Then The second account holds 10 HTT tokens
-    # And The first account holds 90 HTT tokens
+    When The first account creates a transaction to transfer 10 HTT tokens to the second account
+    And The first account submits the transaction
+    Then The second account holds 10 HTT tokens
+    And The first account holds 90 HTT tokens
 
 
-#   Scenario: Create a token transfer transaction paid for by the recipient
-#     Given A first hedera account with more than 10 hbar
-#     And A second Hedera account
-#     And A token named Test Token (HTT) with 1000 tokens
-#     And The second account holds 100 HTT tokens
-#     And The first account holds 0 HTT tokens
-#     When The second account creates a transaction to transfer 10 HTT tokens to the first account
-#     And The first account submits the transaction
-#     Then The second account holds 90 HTT tokens
-#     And The first account holds 10 HTT tokens
-#     And The first account has paid for the transaction fee
+  Scenario: Create a token transfer transaction paid for by the recipient
+    Given A first hedera account with more than 10 hbar
+    And A second Hedera account
+    And A token named Test Token (HTT) with 1000 tokens
+    And The second account holds 100 HTT tokens
+    And The first account holds 0 HTT tokens
+    When The second account creates a transaction to transfer 10 HTT tokens to the first account
+    And The first account submits the transaction
+    Then The second account holds 90 HTT tokens
+    And The first account holds 10 HTT tokens
+    And The first account has paid for the transaction fee
 
 #   Scenario: Create a multi party token transfer transaction
 #     Given A token named Test Token (HTT) with 1000 tokens
