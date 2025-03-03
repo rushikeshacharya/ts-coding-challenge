@@ -10,7 +10,8 @@
   "scripts": {
     "test": "cucumber-js -p default --exit",
     "test:dev": "cucumber-js -p default --tags '@dev' --exit",
-    "test:wip": "cucumber-js -p default --tags 'not @wip' --exit"
+    "test:wip": "cucumber-js -p default --tags 'not @wip' --exit",
+    "create-account": "ts-node src/create-account.ts"
   },
   "devDependencies": {
     "@cucumber/cucumber": "^10.8.0",

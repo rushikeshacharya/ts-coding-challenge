@@ -192,7 +192,7 @@ async function adjustBalance(
   const finalBalance = updatedBalance.tokens?.get(tokenId)?.toNumber() || 0;
   console.log("Final BAlance:", finalBalance);
 
-  assert.ok(finalBalance >= expectedAmount, `Token balance does not match`);
+  assert.ok(finalBalance === expectedAmount, `Token balance does not match`);
 }
 
 //============================== End of Custom Functions ======================================
@@ -383,7 +383,9 @@ Given(
 Given(/^A second Hedera account$/, async function () {
   const account = accounts[2];
   this.secondAccountId = AccountId.fromString(account.id);
-  this.secondAccountPrivateKey = PrivateKey.fromStringED25519(account.privateKey);
+  this.secondAccountPrivateKey = PrivateKey.fromStringED25519(
+    account.privateKey
+  );
   client.setOperator(this.secondAccountId, this.secondAccountPrivateKey);
 });
 Given(
@@ -538,95 +540,228 @@ Then(
     );
   }
 );
-// Given(
-//   /^A first hedera account with more than (\d+) hbar and (\d+) HTT tokens$/,
-//   { timeout: 30000 },
-//   async function (expectedHBAR: number, expectedTokens: number) {
-//     // mint the required tokens
-//     // get the current token amount
 
-//     const query = new AccountBalanceQuery().setAccountId(this.firstAccountId);
-//     const balance = await query.execute(client);
-//     // console.log(
-//     //   "Expected HBAR balance",
-//     //   balance.hbars.toBigNumber().toNumber()
-//     // );
+// TODO: TESTED TILL HERE
 
-//     assert.ok(
-//       balance.hbars.toBigNumber().toNumber() > expectedHBAR,
-//       `HBAR balance does not match`
-//     );
-//     assert.ok(balance.tokens !== null, `Token balance shouldn't be null`);
+Given(
+  /^A first hedera account with more than (\d+) hbar and (\d+) HTT tokens$/,
+  { timeout: 30000 },
+  async function (expectedHBAR: number, expectedTokens: number) {
+    // mint the required tokens
 
-//     const currentTokens = balance.tokens?.get(this.tokenId)?.toNumber() || 0;
-//     if (currentTokens < expectedTokens) {
-//       await mintTokens(
-//         this.tokenId,
-//         expectedTokens - currentTokens,
-//         this.treasuryPrivKey
-//       );
-//     }
-//     // check the required token balance
-//     const newBal = await new AccountBalanceQuery()
-//       .setAccountId(this.firstAccountId)
-//       .execute(client);
-//     const currentTokensBal = newBal.tokens?.get(this.tokenId)?.toNumber() || 0;
+    const account = accounts[1];
+    this.firstAccountId = AccountId.fromString(account.id);
+    this.firstAccountPrivateKey = PrivateKey.fromStringED25519(
+      account.privateKey
+    );
+    client.setOperator(this.firstAccountId, this.firstAccountPrivateKey);
+    // get the current token amount
 
-//     assert.ok(
-//       currentTokensBal > expectedTokens,
-//       `Token balance does not match `
-//     );
-//   }
-// );
-// Given(
-//   /^A second Hedera account with (\d+) hbar and (\d+) HTT tokens$/,
-//   { timeout: 30000 },
-//   async function (expectedHBAR: number, expectedTokens: number) {
-//     const secondAccount = accounts[1];
-//     const SECOND_ACCOUNT_ID = AccountId.fromString(secondAccount.id);
-//     const SECOND_ACC_PRIVATE_KEY = PrivateKey.fromStringED25519(
-//       secondAccount.privateKey
-//     );
-//     this.secondAccountId = SECOND_ACCOUNT_ID;
-//     this.secondAccountPrivKey = SECOND_ACC_PRIVATE_KEY;
+    const query = new AccountBalanceQuery().setAccountId(this.firstAccountId);
+    const balance = await query.execute(client);
+    // console.log(
+    //   "Expected HBAR balance",
+    //   balance.hbars.toBigNumber().toNumber()
+    // );
 
-//     const query = new AccountBalanceQuery().setAccountId(this.secondAccountId);
-//     const balance = await query.execute(client);
+    assert.ok(
+      balance.hbars.toBigNumber().toNumber() > expectedHBAR,
+      `HBAR balance does not match`
+    );
+    assert.ok(balance.tokens !== null, `Token balance shouldn't be null`);
 
-//     assert.ok(
-//       balance.hbars.toBigNumber().toNumber() === expectedHBAR,
-//       `HBAR balance does not match`
-//     );
-//     assert.ok(balance.tokens !== null, `Token balance shouldn't be null`);
-//     const currentTokens = balance.tokens?.get(this.tokenId)?.toNumber() || 0;
-//     if (currentTokens < expectedTokens) {
-//       await adjustBalance(this.tokenId, this.secondAccountId, this.secondAccountPrivKey, expectedTokens);
-//     }
+    await tokenAssociation(
+      this.firstAccountId,
+      this.tokenId,
+      this.firstAccountPrivateKey
+    );
+    await adjustBalance(
+      this.tokenId,
+      expectedTokens,
+      this.firstAccountId,
+      this.firstAccountPrivateKey,
+      this.accountId,
+      this.accountPrivateKey
+    );
+  }
+);
+Given(
+  /^A second Hedera account with (\d+) hbar and (\d+) HTT tokens$/,
+  { timeout: 30000 },
+  async function (expectedHBAR: number, expectedTokens: number) {
+    const secondAccount = accounts[2];
+    this.secondAccountId = AccountId.fromString(secondAccount.id);
+    this.secondAccountPrivateKey = PrivateKey.fromStringED25519(
+      secondAccount.privateKey
+    );
 
-//     const newBal = await new AccountBalanceQuery()
-//       .setAccountId(this.secondAccountId)
-//       .execute(client);
-//     const currentTokensBal = newBal.tokens?.get(this.tokenId)?.toNumber() || 0;
+    const query = new AccountBalanceQuery().setAccountId(this.secondAccountId);
+    const balance = await query.execute(client);
 
-//     assert.ok(
-//       currentTokensBal === expectedTokens,
-//       `Token balance does not match `
-//     );
-//   }
-// );
+    assert.ok(
+      balance.hbars.toBigNumber().toNumber() === expectedHBAR,
+      `HBAR balance does not match`
+    );
 
-// Given(/^A third Hedera account with (\d+) hbar and (\d+) HTT tokens$/, async function () {
+    assert.ok(balance.tokens !== null, `Token balance shouldn't be null`);
 
-// });
-// Given(/^A fourth Hedera account with (\d+) hbar and (\d+) HTT tokens$/, async function () {
+    await tokenAssociation(
+      this.secondAccountId,
+      this.tokenId,
+      this.secondAccountPrivateKey
+    );
+    await adjustBalance(
+      this.tokenId,
+      expectedTokens,
+      this.secondAccountId,
+      this.secondAccountPrivateKey,
+      this.accountId,
+      this.accountPrivateKey
+    );
 
-// });
-// When(/^A transaction is created to transfer (\d+) HTT tokens out of the first and second account and (\d+) HTT tokens into the third account and (\d+) HTT tokens into the fourth account$/, async function () {
+    const newBal = await new AccountBalanceQuery()
+      .setAccountId(this.secondAccountId)
+      .execute(client);
+    const currentTokensBal = newBal.tokens?.get(this.tokenId)?.toNumber() || 0;
 
-// });
-// Then(/^The third account holds (\d+) HTT tokens$/, async function () {
+    assert.ok(
+      currentTokensBal === expectedTokens,
+      `Token balance does not match `
+    );
+  }
+);
 
-// });
-// Then(/^The fourth account holds (\d+) HTT tokens$/, async function () {
+Given(
+  /^A third Hedera account with (\d+) hbar and (\d+) HTT tokens$/,
+  { timeout: 3000 },
+  async function (expectedHBAR: number, expectedTokens: number) {
+    const thirdAccount = accounts[3];
+    this.thirdAccountId = AccountId.fromString(thirdAccount.id);
+    this.thirdAccountPrivateKey = PrivateKey.fromStringED25519(
+      thirdAccount.privateKey
+    );
 
-// });
+    const query = new AccountBalanceQuery().setAccountId(this.thirdAccountId);
+    const balance = await query.execute(client);
+
+    assert.ok(
+      balance.hbars.toBigNumber().toNumber() === expectedHBAR,
+      `HBAR balance does not match`
+    );
+
+    assert.ok(balance.tokens !== null, `Token balance shouldn't be null`);
+
+    await tokenAssociation(
+      this.thirdAccountId,
+      this.tokenId,
+      this.thirdAccountPrivateKey
+    );
+    await adjustBalance(
+      this.tokenId,
+      expectedTokens,
+      this.thirdAccountId,
+      this.thirdAccountPrivateKey,
+      this.accountId,
+      this.accountPrivateKey
+    );
+
+    const newBal = await new AccountBalanceQuery()
+      .setAccountId(this.thirdAccountId)
+      .execute(client);
+    const currentTokensBal = newBal.tokens?.get(this.tokenId)?.toNumber() || 0;
+
+    assert.ok(
+      currentTokensBal === expectedTokens,
+      `Token balance does not match `
+    );
+  }
+);
+Given(
+  /^A fourth Hedera account with (\d+) hbar and (\d+) HTT tokens$/,
+  { timeout: 30000 },
+  async function (expectedHBAR: number, expectedTokens: number) {
+    const fourthAccount = accounts[4];
+    this.fourthAccountId = AccountId.fromString(fourthAccount.id);
+    this.fourthAccountPrivateKey = PrivateKey.fromStringED25519(
+      fourthAccount.privateKey
+    );
+
+    const query = new AccountBalanceQuery().setAccountId(this.fourthAccountId);
+    const balance = await query.execute(client);
+
+    assert.ok(
+      balance.hbars.toBigNumber().toNumber() === expectedHBAR,
+      `HBAR balance does not match`
+    );
+
+    assert.ok(balance.tokens !== null, `Token balance shouldn't be null`);
+
+    await tokenAssociation(
+      this.fourthAccountId,
+      this.tokenId,
+      this.fourthAccountPrivateKey
+    );
+    await adjustBalance(
+      this.tokenId,
+      expectedTokens,
+      this.fourthAccountId,
+      this.fourthAccountPrivateKey,
+      this.accountId,
+      this.accountPrivateKey
+    );
+
+    const newBal = await new AccountBalanceQuery()
+      .setAccountId(this.fourthAccountId)
+      .execute(client);
+    const currentTokensBal = newBal.tokens?.get(this.tokenId)?.toNumber() || 0;
+
+    assert.ok(
+      currentTokensBal === expectedTokens,
+      `Token balance does not match `
+    );
+  }
+);
+When(
+  /^A transaction is created to transfer (\d+) HTT tokens out of the first and second account and (\d+) HTT tokens into the third account and (\d+) HTT tokens into the fourth account$/,
+  { timeout: 3000 },
+  async function (
+    firstAmount: number,
+    secondAmount: number,
+    thirdAmount: number
+  ) {
+    const txId = TransactionId.generate(this.firstAccountId);
+    this.transferTx = new TransferTransaction()
+      .addTokenTransfer(this.tokenId, this.firstAccountId, -firstAmount)
+      .addTokenTransfer(this.tokenId, this.secondAccountId, -firstAmount)
+      .addTokenTransfer(this.tokenId, this.thirdAccountId, secondAmount)
+      .addTokenTransfer(this.tokenId, this.fourthAccountId, thirdAmount)
+      .setTransactionId(txId)
+      .freezeWith(client);
+  }
+);
+Then(
+  /^The third account holds (\d+) HTT tokens$/,
+  async function (tokenAmount: number) {
+    const token = await new AccountBalanceQuery()
+      .setAccountId(this.thirdAccountId)
+      .execute(client);
+    assert.strictEqual(
+      token.tokens!.get(this.tokenId)?.toNumber(),
+      tokenAmount,
+      `Token balance does not match`
+    );
+  }
+);
+Then(
+  /^The fourth account holds (\d+) HTT tokens$/,
+  async function (tokenAmount: number) {
+    const token = await new AccountBalanceQuery()
+      .setAccountId(this.fourthAccountId)
+      .execute(client);
+    assert.strictEqual(
+      token.tokens!.get(this.tokenId)?.toNumber(),
+      tokenAmount,
+      `Token balance does not match`
+    );
+  }
+);
