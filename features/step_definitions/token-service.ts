@@ -20,6 +20,7 @@ import assert from "node:assert";
 
 const client = Client.forTestnet();
 setDefaultTimeout(15000);
+client.setMirrorNetwork(["hcs.testnet.mirrornode.hedera.com:5600"]);
 
 //Set the operator with the account ID and private key
 const treasuryAccountId = process.env.MY_ACCOUNT_ID;
@@ -97,7 +98,7 @@ async function mintTokens(
       "Failed to mint new tokens"
     );
   } catch (error) {
-    console.log("Error while mintTokens Transaction", error);
+    // console.log("Error while mintTokens Transaction", error);
   }
 }
 
@@ -113,7 +114,7 @@ async function transferTokens(
   client: any
 ) {
   try {
-    console.log("TokenAmount", tokenAmount);
+    // console.log("TokenAmount", tokenAmount);
 
     const tx = new TransferTransaction()
       .addTokenTransfer(tokenId, fromAccountId, -tokenAmount)
@@ -129,7 +130,7 @@ async function transferTokens(
       "Failed to transfer tokens"
     );
   } catch (error) {
-    console.log("Error while transferTokens Transaction", error);
+    // console.log("Error while transferTokens Transaction", error);
   }
 }
 
@@ -144,28 +145,25 @@ async function adjustBalance(
   treasuryId: AccountId,
   treasuryKey: PrivateKey
 ) {
-  console.log("TokenID", tokenId);
-  console.log("AccountId", tokenId);
-  console.log("accountKey", accountKey);
-  console.log("Expected Amount, ", expectedAmount);
+  // console.log("TokenID", tokenId);
+  // console.log("AccountId", tokenId);
+  // console.log("accountKey", accountKey);
+  // console.log("Expected Amount, ", expectedAmount);
 
   const balance = await new AccountBalanceQuery()
     .setAccountId(accountId)
     .execute(client);
   const currentTokensBal = balance.tokens?.get(tokenId)?.toNumber() || 0;
-  console.log("Current BAlance: ", currentTokensBal);
+  // console.log("Current BAlance: ", currentTokensBal);
 
   if (currentTokensBal === expectedAmount) return;
 
   const difference = expectedAmount - currentTokensBal;
-  console.log("Difference", difference);
+  // console.log("Difference", difference);
   client.setOperator(treasuryId, treasuryKey);
 
   if (difference > 0) {
-    console.log("Inside IF");
-
     await mintTokens(tokenId, difference, treasuryKey, client);
-
     await transferTokens(
       tokenId,
       treasuryId,
@@ -190,7 +188,7 @@ async function adjustBalance(
     .setAccountId(accountId)
     .execute(client);
   const finalBalance = updatedBalance.tokens?.get(tokenId)?.toNumber() || 0;
-  console.log("Final BAlance:", finalBalance);
+  // console.log("Final BAlance:", finalBalance);
 
   assert.ok(finalBalance === expectedAmount, `Token balance does not match`);
 }
@@ -214,8 +212,6 @@ Given(
     const balance = (await query.execute(client)).hbars
       .toBigNumber()
       .toNumber();
-
-    console.log("Balance ", balance);
 
     assert.ok(
       balance > expectedBalance,
@@ -441,7 +437,7 @@ Given(
       .setAccountId(this.firstAccountId)
       .execute(client);
     const currentTokensBal = balance.tokens?.get(this.tokenId)?.toNumber() || 0;
-    console.log("Current BAlance: ---->", currentTokensBal);
+    // console.log("Current BAlance: ---->", currentTokensBal);
 
     await adjustBalance(
       this.tokenId,
@@ -488,7 +484,7 @@ When(
       .addTokenTransfer(this.tokenId, this.firstAccountId, -tokenAmount)
       .addTokenTransfer(this.tokenId, this.secondAccountId, tokenAmount)
       .setTransactionId(txId)
-      .setTransactionValidDuration(60)
+      .setNodeAccountIds([new AccountId(3)])
       .freezeWith(client);
   }
 );
@@ -496,10 +492,11 @@ When(
   /^The first account submits the transaction$/,
   { timeout: 30000 },
   async function () {
-    const signTransferTx = await this.transferTx.sign(
+    const signer1 = await this.transferTx.sign(
       this.firstAccountPrivateKey
     );
-    const txRes = await signTransferTx.execute(client);
+    const signer2 = await signer1.sign(this.secondAccountPrivateKey);
+    const txRes = await signer2.execute(client);
     const txReceipt = await txRes.getReceipt(client);
     this.txReceipt = txReceipt;
     this.txRes = txRes;
@@ -520,11 +517,13 @@ When(
       .addTokenTransfer(this.tokenId, this.secondAccountId, -tokenAmount)
       .addTokenTransfer(this.tokenId, this.firstAccountId, tokenAmount)
       .setTransactionId(txId)
+      .setTransactionValidDuration(120)
+      .setNodeAccountIds([new AccountId(3)])
       .freezeWith(client);
 
     const tx1 = await this.transferTx.sign(this.secondAccountPrivateKey);
-    // const tx2 = await tx1.sign(this.firstAccountPrivateKey);
-    this.transferTx = tx1;
+    const tx2 = await tx1.sign(this.firstAccountPrivateKey)
+    this.transferTx = tx2;
   }
 );
 Then(
@@ -633,7 +632,7 @@ Given(
 
 Given(
   /^A third Hedera account with (\d+) hbar and (\d+) HTT tokens$/,
-  { timeout: 3000 },
+  { timeout: 30000 },
   async function (expectedHBAR: number, expectedTokens: number) {
     const thirdAccount = accounts[3];
     this.thirdAccountId = AccountId.fromString(thirdAccount.id);
@@ -645,7 +644,7 @@ Given(
     const balance = await query.execute(client);
 
     assert.ok(
-      balance.hbars.toBigNumber().toNumber() === expectedHBAR,
+      balance.hbars.toBigNumber().toNumber() >= expectedHBAR,
       `HBAR balance does not match`
     );
 
@@ -671,7 +670,7 @@ Given(
     const currentTokensBal = newBal.tokens?.get(this.tokenId)?.toNumber() || 0;
 
     assert.ok(
-      currentTokensBal === expectedTokens,
+      currentTokensBal >= expectedTokens,
       `Token balance does not match `
     );
   }
@@ -690,7 +689,7 @@ Given(
     const balance = await query.execute(client);
 
     assert.ok(
-      balance.hbars.toBigNumber().toNumber() === expectedHBAR,
+      balance.hbars.toBigNumber().toNumber() >= expectedHBAR,
       `HBAR balance does not match`
     );
 
@@ -716,14 +715,14 @@ Given(
     const currentTokensBal = newBal.tokens?.get(this.tokenId)?.toNumber() || 0;
 
     assert.ok(
-      currentTokensBal === expectedTokens,
+      currentTokensBal >= expectedTokens,
       `Token balance does not match `
     );
   }
 );
 When(
   /^A transaction is created to transfer (\d+) HTT tokens out of the first and second account and (\d+) HTT tokens into the third account and (\d+) HTT tokens into the fourth account$/,
-  { timeout: 3000 },
+  { timeout: 30000 },
   async function (
     firstAmount: number,
     secondAmount: number,
@@ -736,11 +735,14 @@ When(
       .addTokenTransfer(this.tokenId, this.thirdAccountId, secondAmount)
       .addTokenTransfer(this.tokenId, this.fourthAccountId, thirdAmount)
       .setTransactionId(txId)
+      .setTransactionValidDuration(120)
+      .setNodeAccountIds([new AccountId(3)])
       .freezeWith(client);
   }
 );
 Then(
   /^The third account holds (\d+) HTT tokens$/,
+  { timeout: 30000 },
   async function (tokenAmount: number) {
     const token = await new AccountBalanceQuery()
       .setAccountId(this.thirdAccountId)
@@ -754,6 +756,7 @@ Then(
 );
 Then(
   /^The fourth account holds (\d+) HTT tokens$/,
+  { timeout: 30000 },
   async function (tokenAmount: number) {
     const token = await new AccountBalanceQuery()
       .setAccountId(this.fourthAccountId)

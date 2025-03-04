@@ -1,12 +1,39 @@
+import dotenv from "dotenv";
+dotenv.config();
 export interface Account {
-  id: string, privateKey: string
+  id: string;
+  privateKey: string;
 }
 
 export const accounts: Account[] = [
-  {id: "0.0.4482932", privateKey: "302e020100300506032b657004220420f196c19b4a06e56ca3633d0b2391a090afcebd1fde27f0c398a5b90ab2c08b52"},
-  {id: "0.0.4482933", privateKey: "302e020100300506032b657004220420ddbcd2dd06b944a760866253bcac98a73e536e5c4447081dfa773971fe33ec18"},
-  {id: "0.0.4482934", privateKey: "302e020100300506032b6570042204206be6a20416741195b268b2dd6fd5584d141b2bdd07b4126c31a1925d425631cc"},
-  {id: "0.0.4482935", privateKey: "302e020100300506032b657004220420e6ea695940d0e2a2d747d0cff1ee65c0a48688c8c7381596ee738a0f8e891413"},
-  {id: "0.0.4482936", privateKey: "302e020100300506032b6570042204200ad3d773e73089909b27a486db9a054402c96ad1ab413c49ef669ae9df509070"}
-]
+  {
+    id: "0.0.5613562",
+    privateKey:
+      "302e020100300506032b657004220420574889151e846e902eeebbe8f248b304f0a70bd12e42bb1163dbaf4bf26fc0cd",
+  },
+  {
+    id: "0.0.5613563",
+    privateKey:
+      "302e020100300506032b657004220420e362beab10425525818cf933936f51a382dc00968ee9ec7fed452a8d1924c87b",
+  },
+  {
+    id: "0.0.5649190",
+    privateKey:
+      "a7e570057109c797e861e70bcce23167568cd22ca85f30aadd212e25022de4de",
+  },
+  {
+    id: "0.0.5649215",
+    privateKey:
+      "f23e4ebadd0e34069044e6739186d642dc82395c810cd47af6f32bde7e8145d0",
+  },
+  {
+    id: "0.0.5649223",
+    privateKey:
+      "115ef4c5e20325238e7ec1f04b85c76ab8eb2a314d512153b8a087d35da922bc",
+  },
+];
 
+export const mainAccount: Account = {
+  id: process.env.MY_ACCOUNT_ID || "",
+  privateKey: process.env.MY_PRIVATE_KEY || "",
+};

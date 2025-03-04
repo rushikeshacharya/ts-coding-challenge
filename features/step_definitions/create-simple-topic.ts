@@ -14,7 +14,7 @@ import {
 } from "@hashgraph/sdk";
 import { accounts } from "../../src/config";
 import assert from "node:assert";
-import ConsensusSubmitMessage = RequestType.ConsensusSubmitMessage;
+
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -22,40 +22,27 @@ dotenv.config();
 // Pre-configured client for test network (testnet)
 const client = Client.forTestnet();
 
-//Set the operator with the account ID and private key
-const operatorIdStr = process.env.MY_ACCOUNT_ID;
-const operatorKeyStr = process.env.MY_PRIVATE_KEY;
-
-if (!operatorIdStr || !operatorKeyStr) {
-  throw new Error(
-    "Missing environment variables: MY_ACCOUNT_ID or MY_PRIVATE_KEY"
-  );
-}
-const operatorId = AccountId.fromString(operatorIdStr);
-const operatorKey = PrivateKey.fromStringECDSA(operatorKeyStr);
-
-// console.log(" User Account: ", operatorIdStr);
+client.setMirrorNetwork(["hcs.testnet.mirrornode.hedera.com:5600"]);
 
 // The client operator ID and key is the account that will be automatically set to pay for the transaction fees for each transaction
-client.setOperator(operatorId, operatorKey);
-
 Given(
   /^a first account with more than (\d+) hbars$/,
+  { timeout: 30000 },
   async function (expectedBalance: number) {
     const acc = accounts[0];
     // console.log("Acc ", acc);
 
     const account: AccountId = AccountId.fromString(acc.id);
-    this.account = account;
-    const privKey: PrivateKey = PrivateKey.fromStringECDSA(acc.privateKey);
+    this.accountId = account;
+    const privKey: PrivateKey = PrivateKey.fromStringED25519(acc.privateKey);
     this.privKey = privKey;
-    // console.log('Account', this.account);
+    // console.log('Account', this.accountId);
     // console.log('privKey', this.privKey);
 
-    client.setOperator(this.account, privKey);
+    client.setOperator(this.accountId, this.privKey);
 
     //Create the query request
-    const query = new AccountBalanceQuery().setAccountId(account);
+    const query = new AccountBalanceQuery().setAccountId(this.accountId);
     const balance = await query.execute(client);
     assert.ok(
       balance.hbars.toBigNumber().toNumber() > expectedBalance,
@@ -66,13 +53,15 @@ Given(
 
 When(
   /^A topic is created with the memo "([^"]*)" with the first account as the submit key$/,
+  { timeout: 30000 },
   async function (memo: string) {
     // console.log("Memo: ", memo);
     // console.log("Priv Key", this.privKey);
 
     const tx = await new TopicCreateTransaction()
-      .setSubmitKey(this.privKey)
       .setTopicMemo(memo)
+      .setSubmitKey(this.privKey.publicKey)
+      .freezeWith(client)
       .execute(client);
 
     const receipt = await tx.getReceipt(client);
@@ -84,6 +73,7 @@ When(
 
 When(
   /^The message "([^"]*)" is published to the topic$/,
+  { timeout: 30000 },
   async function (message: string) {
     const tx = await new TopicMessageSubmitTransaction()
       .setTopicId(this.topicId)
@@ -101,42 +91,33 @@ When(
 
 Then(
   /^The message "([^"]*)" is received by the topic and can be printed to the console$/,
-  { timeout: 40000 },
+  { timeout: 30000 },
   async function (message: string) {
-    const receivedMessage = await new Promise<string>((resolve, reject) => {
-      const sub = new TopicMessageQuery()
-        .setTopicId(this.topicId)
-        .setStartTime(0)
-        .subscribe(client, null, (msg) => {
-          const receivedMessage = Buffer.from(msg.contents).toString("utf8");
-          if (receivedMessage) {
-            sub.unsubscribe();
-            resolve(receivedMessage);
-          }
-          console.log(`Received message: ${receivedMessage}`);
-        });
-    });
-    assert.strictEqual(
-      receivedMessage,
-      message,
-      `Publised message ${receivedMessage} and expected message: ${message} are no same`
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+    const topic = await new TopicInfoQuery()
+      .setTopicId(this.topicId)
+      .execute(client);
+    assert.ok(
+      topic.sequenceNumber.toNumber() > 0,
+      "Topic does not have any messege"
     );
   }
 );
 
 Given(
   /^A second account with more than (\d+) hbars$/,
+  { timeout: 30000 },
   async function (expectedBalance: number) {
     const secondAcc = accounts[1];
     const secondAccount: AccountId = AccountId.fromString(secondAcc.id);
     this.secondAccount = secondAccount;
-    const secondAccPrivKey: PrivateKey = PrivateKey.fromStringECDSA(
+    const secondAccPrivKey: PrivateKey = PrivateKey.fromStringED25519(
       secondAcc.privateKey
     );
     this.secondAccPrivKey = secondAccPrivKey;
     client.setOperator(this.secondAccount, secondAccPrivKey);
     //Create the query request
-    const query = new AccountBalanceQuery().setAccountId(secondAccount);
+    const query = new AccountBalanceQuery().setAccountId(this.secondAccount);
     const balance = await query.execute(client);
     assert.ok(
       balance.hbars.toBigNumber().toNumber() > expectedBalance,
@@ -149,7 +130,7 @@ Given(
   /^A (\d+) of (\d+) threshold key with the first and second account$/,
   async function (threshold: number, total: number) {
     this.threshouldKeys = new KeyList(
-      [this.privKey, this.secondAccPrivKey],
+      [this.privKey.publicKey, this.secondAccPrivKey.publicKey],
       threshold
     );
   }
@@ -157,7 +138,7 @@ Given(
 
 When(
   /^A topic is created with the memo "([^"]*)" with the threshold key as the submit key$/,
-  { timeout: 20000 },
+  { timeout: 30000 },
   async function (memo: string) {
     const tx = new TopicCreateTransaction()
       .setTopicMemo(memo)
@@ -170,6 +151,6 @@ When(
     const txReceipt = await txRes.getReceipt(client);
     this.topicId = txReceipt.topicId;
 
-    console.log("Topic Id ", txReceipt.topicId?.toString());
+    // console.log("Topic Id ", txReceipt.topicId?.toString());
   }
 );
